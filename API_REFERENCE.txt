@@ -1,0 +1,572 @@
+"""
+OS SCHEDULER SIMULATOR - API REFERENCE GUIDE
+
+Complete reference for all modules and classes in the system.
+"""
+
+# ============================================================================
+# ALGORITHMS MODULE
+# ============================================================================
+
+"""
+Module: algorithms/
+
+1. FCFS (First Come First Served)
+   File: fcfs.py
+   
+   Function: run_fcfs(processes)
+   └─ Parameters:
+      • processes (list): List of process dicts
+        Format: {'pid', 'arrival', 'burst', 'priority', 'color'}
+   └─ Returns:
+      • result (list): Processes with added fields: start, finish, waiting, turnaround
+      • gantt (list): Gantt data [{'pid', 'start', 'end', 'color'}, ...]
+   
+   Example:
+   ────────
+   from algorithms import fcfs
+   
+   processes = [
+       {'pid': 'P1', 'arrival': 0, 'burst': 5, 'priority': 1, 'color': '#FF6B6B'},
+       {'pid': 'P2', 'arrival': 1, 'burst': 3, 'priority': 1, 'color': '#4ECDC4'},
+   ]
+   result, gantt = fcfs.run_fcfs(processes)
+
+─────────────────────────────────────────────────────────────────────────────
+
+2. SJF (Shortest Job First)
+   File: sjf.py
+   
+   Function: run_sjf_non_preemptive(processes)
+   └─ Parameters: Same as FCFS
+   └─ Returns: Same as FCFS
+   └─ Behavior: Selects process with shortest burst time
+   
+   Function: run_sjf_preemptive(processes)
+   └─ Parameters: Same as FCFS
+   └─ Returns: Same as FCFS (with preemption)
+   └─ Behavior: Preempts on arrival of shorter job (SRTF)
+   
+   Example:
+   ────────
+   from algorithms import sjf
+   
+   result, gantt = sjf.run_sjf_non_preemptive(processes)
+   result, gantt = sjf.run_sjf_preemptive(processes)
+
+─────────────────────────────────────────────────────────────────────────────
+
+3. Priority Scheduling
+   File: priority.py
+   
+   Function: run_priority(processes)
+   └─ Parameters: Same as FCFS
+   └─ Returns: Same as FCFS
+   └─ Behavior: Selects process with lowest priority number (higher priority)
+   └─ Priority: 1 = highest priority, higher numbers = lower priority
+   
+   Example:
+   ────────
+   from algorithms import priority
+   
+   processes = [
+       {'pid': 'P1', 'arrival': 0, 'burst': 5, 'priority': 2, 'color': '#FF6B6B'},
+       {'pid': 'P2', 'arrival': 1, 'burst': 3, 'priority': 1, 'color': '#4ECDC4'},
+   ]
+   result, gantt = priority.run_priority(processes)
+
+─────────────────────────────────────────────────────────────────────────────
+
+4. Round Robin
+   File: round_robin.py
+   
+   Function: run_round_robin(processes, quantum=2)
+   └─ Parameters:
+      • processes (list): Same as FCFS
+      • quantum (int): Time slice for each process (default: 2)
+   └─ Returns: Same as FCFS
+   └─ Behavior: Each process runs for quantum time, then goes to back of queue
+   
+   Example:
+   ────────
+   from algorithms import round_robin
+   
+   result, gantt = round_robin.run_round_robin(processes, quantum=3)
+
+─────────────────────────────────────────────────────────────────────────────
+
+5. MLFQ (Multi-Level Feedback Queue)
+   File: mlfq.py
+   
+   Function: run_mlfq(processes, q0=2, q1=4)
+   └─ Parameters:
+      • processes (list): Same as FCFS
+      • q0 (int): Quantum for Queue 0 (default: 2)
+      • q1 (int): Quantum for Queue 1 (default: 4)
+   └─ Returns: Same as FCFS
+   └─ Behavior: 
+      • Q0: Round Robin with quantum q0
+      • Q1: Round Robin with quantum q1
+      • Q2: FCFS (runs to completion)
+      • Process moves down queue if uses full quantum
+   
+   Example:
+   ────────
+   from algorithms import mlfq
+   
+   result, gantt = mlfq.run_mlfq(processes, q0=2, q1=4)
+
+"""
+
+# ============================================================================
+# METRICS MODULE
+# ============================================================================
+
+"""
+Module: metrics.py
+Class: MetricsCalculator
+
+Purpose: Calculate performance metrics from completed process list
+
+Constructor:
+───────────
+MetricsCalculator(processes)
+└─ Parameters:
+   • processes (list): List of completed processes with fields:
+     pid, arrival, burst, start, finish (+ optional: waiting, turnaround)
+
+Methods:
+────────
+
+1. get_waiting_times()
+   └─ Returns: [{'pid': ..., 'waiting_time': ...}, ...]
+   └─ Details: Waiting time for each process
+
+2. get_average_waiting_time()
+   └─ Returns: float - Average waiting time
+   └─ Formula: sum(waiting times) / number of processes
+
+3. get_turnaround_times()
+   └─ Returns: [{'pid': ..., 'turnaround_time': ...}, ...]
+   └─ Details: Turnaround time for each process
+
+4. get_average_turnaround_time()
+   └─ Returns: float - Average turnaround time
+   └─ Formula: sum(turnaround times) / number of processes
+
+5. get_cpu_utilization()
+   └─ Returns: float - CPU utilization percentage (0-100)
+   └─ Formula: (total busy time / total available time) × 100%
+
+6. get_throughput()
+   └─ Returns: float - Processes per unit time
+   └─ Formula: number of processes / total execution time
+
+7. get_all_metrics()
+   └─ Returns: dict - All metrics organized by category
+   └─ Structure:
+      {
+          'algorithm_info': {'total_processes': ..., 'total_cpu_time': ...},
+          'waiting_time': {'per_process': [...], 'average': ...},
+          'turnaround_time': {'per_process': [...], 'average': ...},
+          'cpu_utilization': ...,
+          'throughput': ...,
+          'process_details': [...]
+      }
+
+8. get_summary_report()
+   └─ Returns: str - Formatted text report
+   └─ Use: Print or display in UI
+
+9. _get_detailed_process_info()
+   └─ Returns: list - Process details with all fields
+   └─ For: Internal use, detailed tables
+
+Example:
+────────
+from metrics import MetricsCalculator
+
+processes = [
+    {'pid': 'P1', 'arrival': 0, 'burst': 5, 'start': 0, 'finish': 5},
+    {'pid': 'P2', 'arrival': 1, 'burst': 3, 'start': 5, 'finish': 8},
+]
+
+calc = MetricsCalculator(processes)
+avg_wait = calc.get_average_waiting_time()
+metrics = calc.get_all_metrics()
+report = calc.get_summary_report()
+
+print(report)
+
+"""
+
+# ============================================================================
+# GANTT CHART MODULE
+# ============================================================================
+
+"""
+Module: gui/gantt.py
+Class: GanttChart
+
+Purpose: Visualize CPU scheduling with color-coded Gantt charts
+
+Constructor:
+───────────
+GanttChart(title="OS Scheduler - Gantt Chart", figsize=(14, 7))
+└─ Parameters:
+   • title (str): Chart title
+   • figsize (tuple): Figure size (width, height)
+
+Methods:
+────────
+
+1. add_process(pid, start, end, color=None)
+   └─ Parameters:
+      • pid (str/int): Process ID
+      • start (int/float): Start time
+      • end (int/float): End time
+      • color (str): Hex color or matplotlib color (auto if None)
+   └─ Effect: Adds single process to chart
+
+2. add_processes(gantt_data)
+   └─ Parameters:
+      • gantt_data (list): [{'pid': ..., 'start': ..., 'end': ..., 'color': ...}, ...]
+   └─ Effect: Adds multiple processes from algorithm output
+
+3. render(save_path=None)
+   └─ Parameters:
+      • save_path (str, optional): Path to save as PNG
+   └─ Effect: Renders the chart
+   └─ Use: Before show() or save()
+
+4. show()
+   └─ Effect: Displays interactive matplotlib window
+   └─ Use: For GUI display
+
+5. update_process(pid, end_time, color=None)
+   └─ Parameters:
+      • pid (str/int): Process ID to update
+      • end_time (int/float): New end time
+      • color (str, optional): New color
+   └─ Returns: bool - Success/failure
+   └─ Use: For real-time updates
+
+6. clear()
+   └─ Effect: Clears all processes and resets chart
+   └─ Use: For resetting
+
+7. export_data()
+   └─ Returns: list - Current gantt data as list of dicts
+
+8. get_statistics()
+   └─ Returns: dict - Statistics (total_time, process_count, etc.)
+
+9. get_html_representation()
+   └─ Returns: str - HTML table of processes
+
+Example:
+────────
+from gui.gantt import GanttChart
+
+gantt = GanttChart("FCFS Scheduling")
+gantt.add_processes(gantt_data)
+gantt.render(save_path='chart.png')
+gantt.show()
+
+"""
+
+# ============================================================================
+# ADAPTIVE MODULE
+# ============================================================================
+
+"""
+Module: adaptive.py
+Class: AdaptiveScheduler
+
+Purpose: Analyze workloads and recommend optimal scheduling algorithms
+
+Constructor:
+───────────
+AdaptiveScheduler()
+└─ No parameters
+
+Methods:
+────────
+
+1. analyze_workload(processes)
+   └─ Parameters:
+      • processes (list): List of process dicts with pid, arrival, burst, priority
+   └─ Returns: dict with:
+      {
+          'total_processes': int,
+          'burst_times': list,
+          'arrival_times': list,
+          'avg_burst': float,
+          'max_burst': int,
+          'min_burst': int,
+          'burst_variance': float,
+          'characteristics': list,
+          'recommendations': list
+      }
+   └─ Use: Get workload analysis
+
+2. suggest_algorithm_switch(current_algorithm, processes)
+   └─ Parameters:
+      • current_algorithm (str): Name of current algorithm
+      • processes (list): Process list
+   └─ Returns: dict with:
+      {
+          'should_switch': bool,
+          'reason': str,
+          'recommended_algorithm': str (if switching),
+          'score': float,
+          'top_3_recommendations': list
+      }
+   └─ Use: Suggest switching during simulation
+
+3. get_algorithm_info(algorithm)
+   └─ Parameters:
+      • algorithm (str): Algorithm name (fcfs, sjf, priority, round_robin, mlfq)
+   └─ Returns: dict with name, pros, cons, best_for, etc.
+   └─ Use: Display algorithm information
+
+4. compare_algorithms(algorithm_list)
+   └─ Parameters:
+      • algorithm_list (list): ['fcfs', 'sjf', ...]
+   └─ Returns: dict - Comparison table with scores
+   └─ Use: Compare multiple algorithms
+
+Example:
+────────
+from adaptive import AdaptiveScheduler
+
+adaptive = AdaptiveScheduler()
+
+# Get analysis
+analysis = adaptive.analyze_workload(processes)
+print(f"Characteristics: {analysis['characteristics']}")
+print(f"Recommendations: {analysis['recommendations']}")
+
+# Get suggestions
+suggestion = adaptive.suggest_algorithm_switch('fcfs', processes)
+if suggestion['should_switch']:
+    print(f"Switch to {suggestion['recommended_algorithm']}")
+
+"""
+
+# ============================================================================
+# GUI MODULE
+# ============================================================================
+
+"""
+Module: gui/app.py
+Class: OSSchedulerGUI
+
+Purpose: Main Tkinter GUI application
+
+Constructor:
+───────────
+OSSchedulerGUI(root)
+└─ Parameters:
+   • root: Tkinter root window
+
+Key Attributes:
+───────────────
+• processes: List of current processes
+• current_algorithm: Currently selected algorithm
+• simulation_state: 'idle', 'running', or 'paused'
+• results: Results from last simulation
+• gantt_data: Gantt chart data from last simulation
+
+Usage:
+──────
+import tkinter as tk
+from gui.app import OSSchedulerGUI
+
+root = tk.Tk()
+app = OSSchedulerGUI(root)
+root.mainloop()
+
+Or use the built-in main function:
+
+from gui.app import main
+main()
+
+"""
+
+# ============================================================================
+# MAIN MODULE
+# ============================================================================
+
+"""
+Module: main.py
+
+Purpose: Application entry point
+
+Function: main()
+───────────────
+└─ Effect: Launches the GUI application
+└─ Usage: python main.py
+
+Function: print_banner()
+────────────────────────
+└─ Effect: Prints application banner
+└─ Usage: Internal (called by main)
+
+Usage:
+──────
+python main.py
+
+"""
+
+# ============================================================================
+# DATA STRUCTURES
+# ============================================================================
+
+"""
+Process Dictionary Format:
+──────────────────────────
+{
+    'pid': 'P1',           # Process ID (required)
+    'arrival': 0,          # Arrival time (required)
+    'burst': 5,            # Burst time needed (required)
+    'priority': 1,         # Priority level (required for priority algorithm)
+    'color': '#FF6B6B',    # Color for visualization (required)
+    
+    # Added by algorithms:
+    'start': 2,            # When process started (added by algorithm)
+    'finish': 7,           # When process finished (added by algorithm)
+    'waiting': 2,          # Time spent waiting (added by algorithm)
+    'turnaround': 7,       # Total time from arrival to finish (added by algorithm)
+    
+    # For preemptive algorithms:
+    'remaining': 3,        # Remaining burst time (internal)
+    'start': -1,           # Initial marker for first CPU time (internal)
+}
+
+Gantt Data Format:
+──────────────────
+[
+    {'pid': 'P1', 'start': 0, 'end': 5, 'color': '#FF6B6B'},
+    {'pid': 'P2', 'start': 5, 'end': 8, 'color': '#4ECDC4'},
+    {'pid': 'P3', 'start': 8, 'end': 13, 'color': '#45B7D1'},
+]
+
+Metrics Dictionary Format:
+──────────────────────────
+{
+    'algorithm_info': {
+        'total_processes': 4,
+        'total_cpu_time': 20
+    },
+    'waiting_time': {
+        'per_process': [
+            {'pid': 'P1', 'waiting_time': 0},
+            {'pid': 'P2', 'waiting_time': 5},
+        ],
+        'average': 2.5
+    },
+    'turnaround_time': {
+        'per_process': [
+            {'pid': 'P1', 'turnaround_time': 5},
+            {'pid': 'P2', 'turnaround_time': 8},
+        ],
+        'average': 6.5
+    },
+    'cpu_utilization': 95.5,
+    'throughput': 0.25,
+    'process_details': [...]
+}
+
+"""
+
+# ============================================================================
+# IMPORT PATTERNS
+# ============================================================================
+
+"""
+Basic Usage Patterns:
+────────────────────
+
+1. Run a single algorithm:
+   from algorithms import fcfs
+   result, gantt = fcfs.run_fcfs(processes)
+
+2. Calculate metrics:
+   from metrics import MetricsCalculator
+   calc = MetricsCalculator(result)
+   metrics = calc.get_all_metrics()
+
+3. Display Gantt chart:
+   from gui.gantt import GanttChart
+   gantt = GanttChart()
+   gantt.add_processes(gantt_data)
+   gantt.show()
+
+4. Get recommendations:
+   from adaptive import AdaptiveScheduler
+   adaptive = AdaptiveScheduler()
+   analysis = adaptive.analyze_workload(processes)
+
+5. Run full application:
+   from gui.app import main
+   main()
+
+6. Or launch from command line:
+   python main.py
+
+"""
+
+# ============================================================================
+# ERROR HANDLING
+# ============================================================================
+
+"""
+Common Errors and Solutions:
+───────────────────────────
+
+1. ModuleNotFoundError: No module named 'matplotlib'
+   Solution: pip install matplotlib
+
+2. ValueError: Process list cannot be empty
+   Solution: Add at least one process before running
+
+3. TypeError: Process must be a dictionary
+   Solution: Ensure processes list contains dicts with required fields
+
+4. KeyError: Missing required field
+   Solution: Check process dict has: pid, arrival, burst, priority, color
+
+"""
+
+# ============================================================================
+# PERFORMANCE NOTES
+# ============================================================================
+
+"""
+Algorithm Performance:
+──────────────────────
+• FCFS: Very fast, O(n log n)
+• SJF: Fast, O(n²)
+• Priority: Fast, O(n²)
+• Round Robin: Variable based on quantum
+• MLFQ: Slowest, but more flexible
+
+Recommended for:
+• <10 processes: All algorithms, instant
+• 10-50 processes: All algorithms, <1 second
+• >50 processes: FCFS or SJF for speed
+
+Metrics Calculation:
+• Instant for all workload sizes
+• Memory efficient
+
+Visualization:
+• Fast for <100 processes
+• Export to PNG: 0.5-1 second
+
+"""
+
+# ============================================================================
+# END OF API REFERENCE
+# ============================================================================

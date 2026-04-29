@@ -1,0 +1,318 @@
+"""
+INSTALLATION & SETUP GUIDE
+OS Scheduler Simulator - Deliverable 1
+
+Quick steps to get the system running on your computer.
+"""
+
+╔════════════════════════════════════════════════════════╗
+║           INSTALLATION GUIDE                          ║
+║    OS Scheduler Simulator - Deliverable 1             ║
+╚════════════════════════════════════════════════════════╝
+
+
+SYSTEM REQUIREMENTS
+═══════════════════
+
+• Operating System: Windows, macOS, or Linux
+• Python: Version 3.7 or higher
+• RAM: Minimum 512 MB (1 GB recommended)
+• Disk Space: ~100 MB
+
+
+STEP 1: INSTALL PYTHON
+══════════════════════
+
+1a. Check if Python is installed:
+    Windows Command Prompt:
+    $ python --version
+    
+    macOS/Linux Terminal:
+    $ python3 --version
+
+1b. If not installed, download from:
+    https://www.python.org/downloads/
+    
+    Choose Python 3.8 or higher
+    
+1c. During installation, CHECK "Add Python to PATH"
+
+
+STEP 2: EXTRACT PROJECT FILES
+══════════════════════════════
+
+1. Navigate to: u:\6th sem\OS\CCP\CCP
+2. The os-scheduler/ folder contains all project files
+3. Note the full path to the folder
+
+
+STEP 3: INSTALL DEPENDENCIES
+════════════════════════════
+
+Option A: Automatic Installation (Recommended)
+──────────────────────────────────────────────
+1. Navigate to os-scheduler folder in terminal/command prompt
+2. Run: python quickstart.py
+   
+   This will:
+   • Check Python version
+   • Verify dependencies
+   • Auto-install missing packages
+   • Launch the application
+
+Option B: Manual Installation
+─────────────────────────────
+1. Open Command Prompt / Terminal
+2. Navigate to os-scheduler folder:
+   $ cd "u:\6th sem\OS\CCP\os-scheduler"
+   
+3. Install required packages:
+   $ pip install -r requirements.txt
+   
+   This installs:
+   • matplotlib (version >= 3.5.0)
+   • numpy (version >= 1.21.0)
+   
+4. Verify installation:
+   $ python -m pip list | grep matplotlib
+   $ python -m pip list | grep numpy
+
+
+STEP 4: RUN THE APPLICATION
+════════════════════════════
+
+Method 1: Using Quickstart (Easiest)
+────────────────────────────────────
+$ cd "u:\6th sem\OS\CCP\os-scheduler"
+$ python quickstart.py
+
+Method 2: Using Main Script
+───────────────────────────
+$ cd "u:\6th sem\OS\CCP\os-scheduler"
+$ python main.py
+
+Method 3: Using GUI Directly
+────────────────────────────
+$ cd "u:\6th sem\OS\CCP\os-scheduler"
+$ python -c "from gui.app import main; main()"
+
+
+STEP 5: TEST THE INSTALLATION
+══════════════════════════════
+
+To verify everything works, run the test suite:
+$ cd "u:\6th sem\OS\CCP\os-scheduler"
+$ python test_scenarios.py
+
+This will:
+• Run 3 test scenarios
+• Test all 5 algorithms
+• Display metrics
+• Show recommendations
+• Verify system is working
+
+
+TROUBLESHOOTING
+═══════════════
+
+Problem 1: Python not found
+──────────────────────────
+Error: 'python' is not recognized as an internal or external command
+Solution: 
+1. Reinstall Python and check "Add Python to PATH"
+2. Restart Command Prompt after Python installation
+3. Try: python3 instead of python
+
+Problem 2: ModuleNotFoundError: No module named 'matplotlib'
+────────────────────────────────────────────────────────────
+Error: ModuleNotFoundError or ImportError
+Solution:
+1. Ensure Python 3.7+ is used
+2. Run: pip install --upgrade pip
+3. Run: pip install matplotlib numpy
+4. If using virtual environment, activate it first
+
+Problem 3: Permission denied on Linux/macOS
+─────────────────────────────────────────────
+Error: Permission denied when running python
+Solution:
+1. Add execute permission: chmod +x quickstart.py
+2. Run with python: python quickstart.py
+3. Or use: python3 quickstart.py
+
+Problem 4: GUI doesn't launch
+──────────────────────────────
+Error: Window doesn't appear or crashes
+Solution:
+1. Ensure Tkinter is installed (usually comes with Python)
+2. On Linux, may need: sudo apt-get install python3-tk
+3. Check for error messages in terminal
+4. Try test_scenarios.py first
+
+Problem 5: Chart visualization not working
+──────────────────────────────────────────
+Error: Gantt chart doesn't display
+Solution:
+1. Upgrade matplotlib: pip install --upgrade matplotlib
+2. Check if display is available (on remote connections)
+3. Save chart instead: Use "Save Chart" button
+4. Verify numpy is installed: pip install numpy
+
+
+VIRTUAL ENVIRONMENT (Optional but Recommended)
+═══════════════════════════════════════════════
+
+Using Virtual Environment isolates your project:
+
+Windows:
+────────
+1. Create venv: python -m venv scheduler_env
+2. Activate: scheduler_env\Scripts\activate
+3. Install: pip install -r requirements.txt
+4. Run: python main.py
+5. Deactivate: deactivate
+
+macOS/Linux:
+────────────
+1. Create venv: python3 -m venv scheduler_env
+2. Activate: source scheduler_env/bin/activate
+3. Install: pip install -r requirements.txt
+4. Run: python main.py
+5. Deactivate: deactivate
+
+
+FIRST-TIME USAGE
+════════════════
+
+1. Launch application:
+   $ python main.py
+
+2. GUI window opens with:
+   • Process input section (left)
+   • Results display (right with tabs)
+
+3. Add a process:
+   • Enter Arrival Time (0)
+   • Enter Burst Time (5)
+   • Enter Priority (1)
+   • Click "Add Process"
+
+4. Select algorithm:
+   • Choose from radio buttons
+   • Set quantum if using Round Robin
+
+5. Run simulation:
+   • Click "▶ Start" button
+
+6. View results:
+   • Click tabs to see different views
+   • Metrics tab: Performance statistics
+   • Gantt Chart tab: Visual timeline
+   • Details tab: Process information
+
+7. Get recommendations:
+   • Click "Get Recommendations"
+   • See AI-based algorithm suggestions
+
+
+ADVANCED USAGE
+══════════════
+
+Run test suite:
+$ python test_scenarios.py
+
+Analyze specific algorithm:
+$ python -c "from algorithms import fcfs; help(fcfs.run_fcfs)"
+
+Check system configuration:
+$ python quickstart.py (shows detailed system info)
+
+Export charts:
+• Run simulation
+• Click "Gantt Chart" tab
+• Click "Save Chart"
+• Choose location and filename
+
+
+FILE LOCATIONS
+══════════════
+
+Project Root: u:\6th sem\OS\CCP\os-scheduler\
+
+Key Files:
+• main.py - Application entry point
+• README.md - Comprehensive documentation
+• API_REFERENCE.txt - Complete API guide
+• requirements.txt - Python dependencies
+• DELIVERABLE_1_SUMMARY.txt - Project summary
+
+Algorithm Files:
+• algorithms/fcfs.py
+• algorithms/sjf.py
+• algorithms/priority.py
+• algorithms/round_robin.py
+• algorithms/mlfq.py
+
+GUI Files:
+• gui/app.py - Main interface
+• gui/gantt.py - Visualization
+
+Analysis Files:
+• metrics.py - Performance metrics
+• adaptive.py - Recommendations
+
+
+UNINSTALL
+═════════
+
+To uninstall dependencies:
+$ pip uninstall matplotlib numpy
+
+To remove virtual environment:
+Windows: rmdir /s scheduler_env
+Linux/macOS: rm -rf scheduler_env
+
+
+GETTING HELP
+════════════
+
+1. Check README.md for comprehensive guide
+2. Read API_REFERENCE.txt for detailed function info
+3. Review DELIVERABLE_1_SUMMARY.txt for overview
+4. Run test_scenarios.py to see working examples
+5. Check code comments for implementation details
+
+
+NEXT STEPS
+══════════
+
+After successful installation:
+
+1. Read the README.md for user guide
+2. Run test_scenarios.py to see demonstrations
+3. Try the interactive GUI with sample data
+4. Experiment with different algorithms
+5. Check AI recommendations for workloads
+6. Export results for analysis
+
+
+SUPPORT
+═══════
+
+For issues:
+1. Check error messages in terminal
+2. Review troubleshooting section above
+3. Verify Python version: python --version
+4. Check dependencies: pip list
+5. Look at code comments and docstrings
+6. Review test_scenarios.py for usage examples
+
+
+═══════════════════════════════════════════════════════════
+
+You are now ready to use the OS Scheduler Simulator!
+
+Command to launch:
+$ python main.py
+
+Happy Scheduling! 🚀

@@ -1,115 +1,103 @@
 # Multi-Level Feedback Queue (MLFQ) Scheduling Algorithm
 # ─────────────────────────────────────────────
-#  SJF - Shortest Job First
-#  Both Preemptive (SRTF) and Non-Preemptive
+#  MLFQ - Multilevel Feedback Queue
+#  3 Queues:
+#    Q0 → Round Robin (quantum = q0, default 2)
+#    Q1 → Round Robin (quantum = q1, default 4)
+#    Q2 → FCFS (runs to completion)
+#  Process moves DOWN a queue if it uses full quantum
 # ─────────────────────────────────────────────
 
-def run_sjf_non_preemptive(processes):
+def run_mlfq(processes, q0=2, q1=4):
     """
-    SJF Non-Preemptive Scheduling.
-    At each decision point, pick the available process with shortest burst time.
+    MLFQ Scheduling with 3 levels.
+    New processes enter Q0 (highest priority).
+    If a process uses its full quantum, it moves to next lower queue.
+    Q2 is FCFS — process runs until completion.
     Args:
         processes: list of dicts with keys: pid, arrival, burst, priority, color
-    Returns:
-        result, gantt
-    """
-    procs    = [p.copy() for p in processes]
-    done     = []
-    gantt    = []
-    result   = []
-    time_now = 0
-
-    while len(done) < len(procs):
-        # Processes that have arrived and not yet done
-        available = [p for p in procs if p['arrival'] <= time_now and p['pid'] not in done]
-
-        if not available:
-            time_now += 1
-            continue
-
-        # Pick shortest burst
-        p = min(available, key=lambda x: x['burst'])
-
-        p['start']      = time_now
-        p['finish']     = time_now + p['burst']
-        p['waiting']    = p['start'] - p['arrival']
-        p['turnaround'] = p['finish'] - p['arrival']
-
-        gantt.append({
-            'pid':   p['pid'],
-            'start': p['start'],
-            'end':   p['finish'],
-            'color': p['color']
-        })
-
-        time_now = p['finish']
-        done.append(p['pid'])
-        result.append(p)
-
-    return result, gantt
-
-
-def run_sjf_preemptive(processes):
-    """
-    SJF Preemptive (SRTF - Shortest Remaining Time First).
-    At every time unit, the process with shortest remaining time runs.
-    Args:
-        processes: list of dicts with keys: pid, arrival, burst, priority, color
+        q0: quantum for Queue 0
+        q1: quantum for Queue 1
     Returns:
         result, gantt
     """
     procs = [p.copy() for p in processes]
     for p in procs:
         p['remaining'] = p['burst']
+        p['level']     = 0          # starts in Q0
         p['start']     = -1
 
-    gantt    = []
-    done     = []
-    time_now = 0
-    last_pid = None
-    seg_start = 0
+    # 3 queues
+    queues = [[], [], []]
+    gantt  = []
+    done   = []
 
-    while len(done) < len(procs):
-        available = [p for p in procs if p['arrival'] <= time_now and p['pid'] not in done]
+    time_now     = 0
+    procs_sorted = sorted(procs, key=lambda x: x['arrival'])
+    idx          = 0
 
-        if not available:
-            time_now += 1
-            continue
+    def add_new_arrivals():
+        """Add processes that have arrived by time_now into Q0."""
+        nonlocal idx
+        while idx < len(procs_sorted) and procs_sorted[idx]['arrival'] <= time_now:
+            queues[0].append(procs_sorted[idx])
+            idx += 1
 
-        p = min(available, key=lambda x: x['remaining'])
+    add_new_arrivals()
 
-        # Record first start
-        if p['start'] == -1:
-            p['start'] = time_now
+    while any(queues) or idx < len(procs_sorted):
+        # CPU idle — nothing in any queue
+        if not any(queues):
+            time_now = procs_sorted[idx]['arrival']
+            add_new_arrivals()
 
-        # New segment starts when process changes
-        if last_pid != p['pid']:
-            if last_pid is not None:
-                prev = next(x for x in procs if x['pid'] == last_pid)
-                gantt.append({
-                    'pid':   last_pid,
-                    'start': seg_start,
-                    'end':   time_now,
-                    'color': prev['color']
-                })
-            seg_start = time_now
-            last_pid  = p['pid']
+        # Check queues from highest to lowest priority
+        for level in range(3):
+            if not queues[level]:
+                continue
 
-        p['remaining'] -= 1
-        time_now       += 1
+            p = queues[level].pop(0)
 
-        if p['remaining'] == 0:
-            p['finish']     = time_now
-            p['turnaround'] = p['finish'] - p['arrival']
-            p['waiting']    = p['turnaround'] - p['burst']
-            done.append(p['pid'])
+            # Record first CPU time
+            if p['start'] == -1:
+                p['start'] = time_now
+
+            # Determine quantum for this level
+            if level == 0:
+                quantum = q0
+            elif level == 1:
+                quantum = q1
+            else:
+                quantum = p['remaining']   # Q2 = FCFS, run to completion
+
+            run_time = min(quantum, p['remaining'])
+
             gantt.append({
                 'pid':   p['pid'],
-                'start': seg_start,
-                'end':   time_now,
-                'color': p['color']
+                'start': time_now,
+                'end':   time_now + run_time,
+                'color': p['color'],
+                'level': level              # useful for reporting
             })
-            last_pid = None
 
-    result = [p for p in procs if p['pid'] in done]
-    return result, gantt
+            time_now       += run_time
+            p['remaining'] -= run_time
+
+            # Add newly arrived processes to Q0
+            add_new_arrivals()
+
+            if p['remaining'] > 0:
+                # Used full quantum → demote to next lower queue
+                next_level  = min(level + 1, 2)
+                p['level']  = next_level
+                queues[next_level].append(p)
+            else:
+                # Finished
+                p['finish']     = time_now
+                p['turnaround'] = p['finish'] - p['arrival']
+                p['waiting']    = p['turnaround'] - p['burst']
+                done.append(p)
+
+            break   # restart from Q0 after every time slice
+
+    return done, gantt

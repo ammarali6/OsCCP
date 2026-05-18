@@ -16,6 +16,8 @@ from algorithms import fcfs, sjf, priority, round_robin, mlfq
 from metrics import MetricsCalculator
 from adaptive import AdaptiveScheduler
 from gui.gantt import GanttChart
+from memory import VariablePartitionMemory
+from memory.visualizer import MemoryVisualizer
 
 
 class OSSchedulerGUI:
@@ -93,9 +95,14 @@ class OSSchedulerGUI:
         
         ttk.Label(input_frame, text="Priority (1=High):").pack(anchor=tk.W)
         self.priority_input = ttk.Entry(input_frame, width=20)
-        self.priority_input.pack(fill=tk.X, pady=(0, 10))
+        self.priority_input.pack(fill=tk.X, pady=(0, 5))
         self.priority_input.insert(0, "1")
-        
+
+        ttk.Label(input_frame, text="Memory Req (units):").pack(anchor=tk.W)
+        self.memory_input = ttk.Entry(input_frame, width=20)
+        self.memory_input.pack(fill=tk.X, pady=(0, 10))
+        self.memory_input.insert(0, "64")
+
         # Buttons
         button_frame = ttk.Frame(input_frame)
         button_frame.pack(fill=tk.X, pady=(0, 5))
@@ -140,7 +147,26 @@ class OSSchedulerGUI:
         self.quantum_input = ttk.Entry(algo_frame, width=10)
         self.quantum_input.pack(anchor=tk.W)
         self.quantum_input.insert(0, "2")
-        
+
+        # Memory configuration
+        mem_frame = ttk.LabelFrame(parent, text="Memory Configuration", padding=8)
+        mem_frame.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(mem_frame, text="Total Memory:").pack(anchor=tk.W)
+        self.mem_total_input = ttk.Entry(mem_frame, width=10)
+        self.mem_total_input.pack(anchor=tk.W)
+        self.mem_total_input.insert(0, "512")
+
+        ttk.Label(mem_frame, text="Allocation Algorithm:").pack(anchor=tk.W, pady=(5, 0))
+        self.mem_algo_var = tk.StringVar(value='first_fit')
+        mem_algos = [
+            ('First Fit', 'first_fit'),
+            ('Best Fit', 'best_fit'),
+            ('Worst Fit', 'worst_fit'),
+        ]
+        for label, value in mem_algos:
+            ttk.Radiobutton(mem_frame, text=label, variable=self.mem_algo_var, value=value).pack(anchor=tk.W)
+
         # Simulation controls
         control_frame = ttk.LabelFrame(parent, text="Simulation Control", padding=8)
         control_frame.pack(fill=tk.X, pady=(0, 10))
@@ -193,6 +219,11 @@ class OSSchedulerGUI:
         details_frame = ttk.Frame(self.notebook)
         self.notebook.add(details_frame, text="📋 Details")
         self._setup_details_tab(details_frame)
+
+        # Memory tab
+        memory_frame = ttk.Frame(self.notebook)
+        self.notebook.add(memory_frame, text="🧠 Memory")
+        self._setup_memory_tab(memory_frame)
         
     def _setup_metrics_tab(self, parent):
         """Setup metrics display tab."""
@@ -215,6 +246,19 @@ class OSSchedulerGUI:
         ttk.Button(button_frame, text="Show Gantt Chart", command=self._show_gantt_chart).pack(side=tk.LEFT, padx=2)
         ttk.Button(button_frame, text="Save Chart", command=self._save_gantt_chart).pack(side=tk.LEFT, padx=2)
         
+    def _setup_memory_tab(self, parent):
+        """Setup memory visualization tab."""
+        self.memory_text = tk.Text(parent, wrap=tk.WORD, bg='white', font=('Courier', 10))
+        self.memory_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        scrollbar = ttk.Scrollbar(self.memory_text)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.memory_text.config(yscrollcommand=scrollbar.set)
+
+        button_frame = ttk.Frame(parent)
+        button_frame.pack(fill=tk.X, padx=5, pady=5)
+        ttk.Button(button_frame, text="Show Memory Chart", command=self._show_memory_chart).pack(side=tk.LEFT, padx=2)
+
     def _setup_details_tab(self, parent):
         """Setup process details tab."""
         self.details_text = tk.Text(parent, wrap=tk.WORD, bg='white', font=('Courier', 9))
@@ -230,33 +274,41 @@ class OSSchedulerGUI:
             arrival = int(self.arrival_input.get())
             burst = int(self.burst_input.get())
             priority = int(self.priority_input.get())
-            
+            memory_req = int(self.memory_input.get())
+
             if burst <= 0:
                 messagebox.showerror("Error", "Burst time must be positive")
                 return
-                
+            if memory_req <= 0:
+                messagebox.showerror("Error", "Memory requirement must be positive")
+                return
+
             self.process_counter += 1
             pid = f"P{self.process_counter}"
             color = self.colors[self.process_counter % len(self.colors)]
-            
+
             process = {
                 'pid': pid,
                 'arrival': arrival,
                 'burst': burst,
                 'priority': priority,
+                'memory_req': memory_req,
                 'color': color
             }
-            
+
             self.processes.append(process)
-            self.process_list.insert(tk.END, f"{pid}: Arr={arrival}, Burst={burst}, Pri={priority}")
-            
+            self.process_list.insert(tk.END, f"{pid}: Arr={arrival}, Burst={burst}, Pri={priority}, Mem={memory_req}")
+
             # Clear inputs
             self.arrival_input.delete(0, tk.END)
             self.burst_input.delete(0, tk.END)
+            self.memory_input.delete(0, tk.END)
             self.arrival_input.insert(0, str(arrival + 1))
             self.burst_input.insert(0, "5")
+            self.priority_input.delete(0, tk.END)
             self.priority_input.insert(0, "1")
-            
+            self.memory_input.insert(0, "64")
+
         except ValueError:
             messagebox.showerror("Error", "Please enter valid numbers")
             
@@ -279,42 +331,77 @@ class OSSchedulerGUI:
         self.current_algorithm = self.algo_var.get()
         
     def _start_simulation(self):
-        """Start the simulation."""
+        """Start the simulation with memory constraints."""
         if not self.processes:
             messagebox.showwarning("Warning", "Please add at least one process")
             return
-            
+
         try:
             algo = self.current_algorithm
             quantum = int(self.quantum_input.get()) if algo in ['round_robin', 'mlfq'] else None
-            
-            # Run selected algorithm
+            mem_total = int(self.mem_total_input.get())
+            mem_algo = self.mem_algo_var.get()
+
+            # Initialize memory manager
+            mem = VariablePartitionMemory(total_size=mem_total, algorithm=mem_algo)
+
+            # Prepare processes with memory requirements
+            procs = [p.copy() for p in self.processes]
+            for p in procs:
+                if 'memory_req' not in p:
+                    p['memory_req'] = 64
+                p['memory_allocated'] = False
+                p['memory_wait'] = 0
+
+            # Try to allocate memory for each process
+            pending = []
+            ready = []
+            for p in procs:
+                allocated = mem.allocate(p['pid'], p['memory_req'])
+                if allocated:
+                    p['memory_allocated'] = True
+                    ready.append(p)
+                else:
+                    p['memory_wait'] = 0  # Would track actual wait in full implementation
+                    pending.append(p)
+
+            # Run selected algorithm on ready processes
+            if not ready:
+                messagebox.showwarning("Warning", "No processes could be allocated memory")
+                return
+
             if algo == 'fcfs':
-                result, gantt = fcfs.run_fcfs(self.processes)
+                result, gantt = fcfs.run_fcfs(ready)
             elif algo == 'sjf':
-                result, gantt = sjf.run_sjf_non_preemptive(self.processes)
+                result, gantt = sjf.run_sjf_non_preemptive(ready)
             elif algo == 'priority':
-                result, gantt = priority.run_priority(self.processes)
+                result, gantt = priority.run_priority(ready)
             elif algo == 'round_robin':
-                result, gantt = round_robin.run_round_robin(self.processes, quantum=quantum)
+                result, gantt = round_robin.run_round_robin(ready, quantum=quantum)
             elif algo == 'mlfq':
-                result, gantt = mlfq.run_mlfq(self.processes, q0=quantum, q1=quantum*2)
+                result, gantt = mlfq.run_mlfq(ready, q0=quantum, q1=quantum*2)
             else:
                 raise ValueError("Unknown algorithm")
-                
+
+            # Add pending processes to result (they couldn't get memory)
+            for p in pending:
+                result.append(p)
+
             self.results = result
             self.gantt_data = gantt
+            self.memory_manager = mem
             self.simulation_state = 'running'
-            
+
             # Display results
             self._display_metrics()
             self._display_details()
-            
+            self._display_memory()
+
             # Update UI
             self.start_btn.config(state=tk.DISABLED)
             self.pause_btn.config(state=tk.NORMAL)
             self.status_label.config(text="Status: Simulation Complete ✓", foreground='green')
-            
+
         except Exception as e:
             messagebox.showerror("Error", f"Simulation failed: {str(e)}")
             
@@ -370,17 +457,67 @@ class OSSchedulerGUI:
         except Exception as e:
             messagebox.showerror("Error", f"Metrics calculation failed: {str(e)}")
             
+    def _display_memory(self):
+        """Display memory allocation information."""
+        if not hasattr(self, 'memory_manager') or not self.memory_manager:
+            return
+
+        mem = self.memory_manager
+        blocks = mem.get_block_state()
+
+        report = "🧠 Memory Allocation Report\n"
+        report += "─" * 50 + "\n\n"
+        report += f"Total Memory: {mem.total_size} units\n"
+        report += f"Used Memory: {mem.get_used_memory()} units\n"
+        report += f"Free Memory: {mem.get_free_memory()} units\n"
+        report += f"Utilization: {mem.get_utilization():.1f}%\n"
+        report += f"Algorithm: {mem.algorithm.replace('_', ' ').title()}\n\n"
+
+        ext_frag, int_frag = mem.get_fragmentation()
+        report += f"External Fragmentation: {ext_frag} units\n"
+        report += f"Internal Fragmentation: {int_frag} units\n\n"
+
+        report += "Memory Blocks:\n"
+        report += f"{'Start':<8} {'Size':<8} {'Status':<12} {'PID':<6}\n"
+        report += "─" * 40 + "\n"
+        for b in blocks:
+            status = "Free" if b['free'] else "Allocated"
+            pid = b['pid'] if b['pid'] else "-"
+            report += f"{b['start']:<8} {b['size']:<8} {status:<12} {pid:<6}\n"
+
+        self.memory_text.config(state=tk.NORMAL)
+        self.memory_text.delete('1.0', tk.END)
+        self.memory_text.insert('1.0', report)
+        self.memory_text.config(state=tk.DISABLED)
+
+    def _show_memory_chart(self):
+        """Display memory allocation chart."""
+        if not hasattr(self, 'memory_manager') or not self.memory_manager:
+            messagebox.showwarning("Warning", "Run a simulation first")
+            return
+
+        try:
+            viz = MemoryVisualizer("Memory Allocation")
+            viz.plot_partitions(
+                self.memory_manager.get_block_state(),
+                total_size=self.memory_manager.total_size
+            )
+            viz.show()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to display memory chart: {str(e)}")
+
     def _display_details(self):
         """Display detailed process information."""
         if not self.results:
             return
-            
-        details = f"{'PID':<6} {'Arr':<5} {'Burst':<6} {'Start':<7} {'Finish':<8} {'Wait':<6} {'TAT':<6}\n"
-        details += "─" * 50 + "\n"
-        
+
+        details = f"{'PID':<6} {'Arr':<5} {'Burst':<6} {'Start':<7} {'Finish':<8} {'Wait':<6} {'TAT':<6} {'Mem':<6} {'Alloc':<6}\n"
+        details += "─" * 60 + "\n"
+
         for p in self.results:
-            details += f"{p['pid']:<6} {p['arrival']:<5} {p['burst']:<6} {p['start']:<7} {p['finish']:<8} {p['waiting']:<6} {p['turnaround']:<6}\n"
-            
+            alloc = 'Yes' if p.get('memory_allocated') else 'No'
+            details += f"{p['pid']:<6} {p['arrival']:<5} {p['burst']:<6} {p.get('start', 0):<7} {p.get('finish', 0):<8} {p.get('waiting', 0):<6} {p.get('turnaround', 0):<6} {p.get('memory_req', 0):<6} {alloc:<6}\n"
+
         self.details_text.config(state=tk.NORMAL)
         self.details_text.delete('1.0', tk.END)
         self.details_text.insert('1.0', details)

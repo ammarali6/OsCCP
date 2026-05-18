@@ -314,6 +314,146 @@ For issues or questions, please check:
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: April 2026  
-**Status**: Complete - Deliverable 1
+---
+
+## 🐳 Deliverable 2: Containerization, Memory Management & Resource-Constrained Scheduling
+
+### New Features
+
+#### 6. Docker-Based Deployment
+- **Dockerfile** with Python 3.11 slim, Tkinter/matplotlib dependencies
+- **docker-compose.yml** with CPU/memory resource limits for multiple instances
+- Headless mode for containerized execution (no GUI required)
+
+```bash
+# Build and run
+docker build -t scheduler-sim .
+docker run --cpus="1.0" --memory="512m" scheduler-sim
+
+# Run multiple instances with different limits
+docker-compose up
+```
+
+#### 7. Memory Management Module (`memory/`)
+- **Fixed Partition Allocation** — pre-divided memory blocks
+- **Variable Partition Allocation** — dynamic splitting with merge on free
+- **Paging Simulation** — page tables, frame allocation, page fault tracking
+- **Allocation Algorithms**:
+  - First Fit
+  - Best Fit
+  - Worst Fit
+- **Memory Visualization** — Matplotlib charts of allocation state
+
+#### 8. Resource-Constrained Scheduling
+- Processes include `memory_req` (abstract memory units)
+- Scheduling respects both CPU and memory availability
+- Memory wait time tracking (time spent waiting for allocation)
+- Extended metrics: memory utilization, memory wait, allocation success rate
+
+#### 9. Headless CLI Mode
+Run simulations without GUI for containers or automation:
+
+```bash
+# Basic headless run
+python main.py --headless -a fcfs -p simple
+
+# With memory constraints
+python main.py --headless -a mlfq -p memory_stress -m 400 --memory-algo best_fit
+
+# All algorithms
+python main.py --headless -a round_robin -p mixed -q 3
+```
+
+Outputs: `metrics_*.json`, `gantt_*.png`, `memory_*.png`, `details_*.txt`
+
+#### 10. Linux Monitoring Integration (`monitor/`)
+Wrappers for system tools:
+- `top` / `ps aux` — process monitoring
+- `docker stats` — container resource usage
+- `/proc/meminfo`, `/proc/stat` — memory and CPU parsing
+- Side-by-side logging of simulator vs real system metrics
+
+```bash
+python demo/monitor_demo.py -a round_robin -p mixed
+```
+
+#### 11. Process Isolation Demos
+- **`demo/isolation.sh`** — PID namespace demonstration
+- **`demo/resource_limits.sh`** — CPU/memory throttling effects
+- **`docs/docker-flags.md`** — Complete Docker flags reference
+
+### Updated Project Structure
+
+```
+os-scheduler/
+├── main.py                       # Entry point (GUI + CLI)
+├── headless.py                   # Headless simulation runner
+├── Dockerfile                    # Container configuration
+├── docker-compose.yml            # Multi-instance orchestration
+├── requirements.txt              # Dependencies
+│
+├── algorithms/                   # Scheduling algorithms
+│   ├── fcfs.py
+│   ├── sjf.py
+│   ├── priority.py
+│   ├── round_robin.py
+│   └── mlfq.py
+│
+├── memory/                       # NEW: Memory management
+│   ├── partitions.py
+│   ├── paging.py
+│   ├── algorithms.py
+│   └── visualizer.py
+│
+├── monitor/                      # NEW: System monitoring
+│   └── system.py
+│
+├── gui/
+│   ├── app.py                    # Updated with memory input
+│   └── gantt.py
+│
+├── metrics.py                    # Updated with memory metrics
+├── adaptive.py
+│
+├── demo/                         # NEW: Demonstration scripts
+│   ├── isolation.sh
+│   ├── resource_limits.sh
+│   └── monitor_demo.py
+│
+├── docs/
+│   ├── deliverable-2.md          # Full technical report
+│   └── docker-flags.md
+│
+└── output/                       # Generated artifacts
+```
+
+### Quick Commands
+
+```bash
+# GUI mode
+python main.py
+
+# Headless simulation
+python main.py --headless -a fcfs -p simple
+
+# Docker with limits
+docker run --cpus="0.5" --memory="256m" scheduler-sim
+
+# Memory stress test
+python main.py --headless -a best_fit -p memory_stress -m 512
+
+# Monitoring demo
+python demo/monitor_demo.py
+
+# Isolation demo
+./demo/isolation.sh
+
+# Resource limits demo
+./demo/resource_limits.sh
+```
+
+---
+
+**Version**: 2.0
+**Last Updated**: May 2026
+**Status**: Complete - Deliverables 1 & 2

@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  simulator:
+    build: .
+    image: scheduler-sim:latest
+    container_name: scheduler-simulator
+    # Resource constraints for demonstration
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    # For headless mode (default CMD runs --headless)
+    # To run GUI via X11 forwarding, override command and add DISPLAY env
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Volume for output artifacts (metrics, charts, logs)
+    volumes:
+      - ./output:/app/output
+    # Keep container running for interactive demos
+    stdin_open: true
+    tty: true
+
+  # Second instance to demonstrate isolation
+  simulator-b:
+    build: .
+    image: scheduler-sim:latest
+    container_name: scheduler-simulator-b
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./output:/app/output
+    stdin_open: true
+    tty: true
